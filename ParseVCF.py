@@ -1,0 +1,69 @@
+''' Read a VCF file and extract genotype ratios '''
+
+import csv
+def parse(filename, whitelist_chrs, minqual=0):
+    chrdict={c:[] for c in whitelist_chrs}
+    with open(filename) as f:
+        reader = csv.reader(f, delimiter = '\t', quoting = csv.QUOTE_NONE)
+        Triallelic_counter = 0
+        Zerodepth_counter = 0
+        Absent_counters={}
+        last_chr=None
+        SNP_counter=1
+        genotype_indices={}
+        for row in reader:
+            if row[0].startswith('##'):
+                    continue
+            elif row[0].startswith('#'):
+                # find the sibling and mutant column
+                for i, col in enumerate(row):
+                    if col.lower().startswith('mut'):
+                        genotype_indices['mut']=i
+                    elif col.lower().startswith('sib'):
+                        genotype_indices['sib']=i
+                continue
+            chromosome = row[0].upper()
+            chromosome = chromosome.replace("CHROMOSOME_","")
+            chromosome = chromosome.replace("CHR","")
+            if (chromosome in whitelist_chrs) or (not whitelist_chrs):
+                if chromosome <> last_chr: print chromosome,
+                last_chr = chromosome
+                position = row[1]
+                qual = float(row[5])
+                if qual>minqual:
+                    try:
+                        SNP_counter+=1
+                        ratios={}
+                        vcf_format_info = row[8].split(":")
+                        if 'RO' not in vcf_format_info:
+                            raise ValueError("Could not find RO field in info string")
+                        try:
+                            for genotype, index in genotype_indices.iteritems():
+                                genotype_data = row[index].split(':')
+                                if len(genotype_data)>1:
+                                    ro = int(genotype_data[vcf_format_info.index('RO')])
+                                    ao = int(genotype_data[vcf_format_info.index('AO')])
+                                    ratios[genotype] = 1.0 * ao / (ro+ao)
+                                else: ## the SNP is empty for this genotype
+                                    ## we don't know what allele it is so it should be skipped
+                                    Absent_counters[genotype]=Absent_counters.get(genotype,0)+1
+                                    break #breaks out of this mini-loop
+                            else:
+                                ## only runs if the parsing was successful
+                                rowdata = [position]+[ratios[genotype] for genotype in ['mut','sib'] if genotype in genotype_indices]
+                                chrdict[chromosome].append(rowdata)
+            
+                        except ValueError:
+                            Triallelic_counter+=1
+                            continue #ignore rows that can't be converted, like tri-allelic
+                        except ZeroDivisionError:
+                            Zerodepth_counter+=1
+                            continue
+                    except:
+                        print "Parsing failed at "+chromosome+':'+position
+                        raise
+        print 
+        print SNP_counter, "SNPs were parsed."
+        print Triallelic_counter, "triallelic SNPs and", Zerodepth_counter, "zero-depth SNPs ignored"
+        print "Missing (uncovered) SNPs:", Absent_counters
+    return chrdict
