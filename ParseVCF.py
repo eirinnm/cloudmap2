@@ -17,7 +17,7 @@ def parse(filename, whitelist_chrs, minqual=0):
             elif row[0].startswith('#'):
                 # find the sibling and mutant column
                 for i, col in enumerate(row):
-                    if col.lower().startswith('mut'):
+                    if (col.lower().startswith('mut') or col.lower().startswith('unk')):
                         genotype_indices['mut']=i
                     elif col.lower().startswith('sib'):
                         genotype_indices['sib']=i
@@ -29,6 +29,8 @@ def parse(filename, whitelist_chrs, minqual=0):
                 if chromosome <> last_chr: print chromosome,
                 last_chr = chromosome
                 position = row[1]
+                ref = row[3]
+                alt = row[4]
                 qual = float(row[5])
                 if qual>minqual:
                     try:
@@ -50,7 +52,7 @@ def parse(filename, whitelist_chrs, minqual=0):
                                     break #breaks out of this mini-loop
                             else:
                                 ## only runs if the parsing was successful
-                                rowdata = [position]+[ratios[genotype] for genotype in ['mut','sib'] if genotype in genotype_indices]
+                                rowdata = [int(position),ref,alt]+[ratios[genotype] for genotype in ['mut','sib'] if genotype in genotype_indices]
                                 chrdict[chromosome].append(rowdata)
             
                         except ValueError:
