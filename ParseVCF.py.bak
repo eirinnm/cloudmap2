@@ -26,7 +26,7 @@ def parse(filename, whitelist_chrs, minqual=0):
             chromosome = chromosome.replace("CHROMOSOME_","")
             chromosome = chromosome.replace("CHR","")
             if (chromosome in whitelist_chrs) or (not whitelist_chrs):
-                if chromosome != last_chr: print(chromosome, end=' ')
+                if chromosome <> last_chr: print chromosome,
                 last_chr = chromosome
                 position = row[1]
                 ref = row[3]
@@ -41,7 +41,7 @@ def parse(filename, whitelist_chrs, minqual=0):
                         if 'RO' not in vcf_format_info:
                             raise ValueError("Could not find RO field in info string")
                         try:
-                            for genotype, index in genotype_indices.items():
+                            for genotype, index in genotype_indices.iteritems():
                                 genotype_data = row[index].split(':')
                                 if len(genotype_data)>1:
                                     ro = int(genotype_data[vcf_format_info.index('RO')])
@@ -67,10 +67,10 @@ def parse(filename, whitelist_chrs, minqual=0):
                             Zerodepth_counter+=1
                             continue
                     except:
-                        print("Parsing failed at "+chromosome+':'+position)
+                        print "Parsing failed at "+chromosome+':'+position
                         raise
-        print() 
-        print(SNP_counter, "SNPs were parsed.")
-        print(Triallelic_counter, "triallelic SNPs and", Zerodepth_counter, "zero-depth SNPs ignored")
-        print("Missing (uncovered) SNPs:", Absent_counters)
+        print 
+        print SNP_counter, "SNPs were parsed."
+        print Triallelic_counter, "triallelic SNPs and", Zerodepth_counter, "zero-depth SNPs ignored"
+        print "Missing (uncovered) SNPs:", Absent_counters
     return chrdict

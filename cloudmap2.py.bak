@@ -4,7 +4,7 @@ Created on Fri May 19 11:22:00 2017
 
 @author: Eirinn
 """
-
+from __future__ import division
 import math
 import os.path
 import argparse
@@ -58,7 +58,7 @@ for c in chrs:
 df=pd.concat(df)
 chrom=None ## free memory
 wt_snps.close()
-print("Finish reading in",time.time()-starttime)
+print "Finish reading in",time.time()-starttime
 
 #%% Now calculate significant homozygosity at different bins
 ## do we have sibling data? Then calculate allelic distance
@@ -149,7 +149,7 @@ plot_distance = False
 plot_kde = True
 plot_homozygosity = True
 if args.closeup:
-    print("Closeup plots:",args.closeup)
+    print "Closeup plots:",args.closeup
     for c in args.closeup:
         ## draw a larger plot
         fig=plt.figure(figsize=(8,6))
@@ -209,7 +209,7 @@ if args.closeup:
 #%% Print a table of candidates
 #snptable=pd.DataFrame(columns=['CHROM','POS','ID','REF','ALT'])
 if args.closeup:
-    print("Closeup tables:",args.closeup)
+    print "Closeup tables:",args.closeup
     for c in args.closeup:
         if USE_SIBS:
             snptable=cdf[(cdf.mut>=0.90) & (cdf.sib<0.68) & ~cdf.wt].copy()
@@ -226,7 +226,7 @@ if args.closeup:
         else:
             snptable['info']=snptable.apply(lambda row: "mut=%0.2f;mutdp=%s" % (row.mut, row.mut_depth), axis=1)
         snptable=snptable[['chr','pos','id','ref','alt','qual','filter','info']]
-        print(len(snptable), "possible candidate SNPs")
+        print len(snptable), "possible candidate SNPs"
         snptable.to_csv(datafilename[:-3]+c+'.vcf',sep='\t',index=False)
         ## also print all SNPs on this chr to a table in case I want to process them later
         cdf[~cdf.wt].to_csv(datafilename[:-3]+c+'.all.txt',sep='\t')
