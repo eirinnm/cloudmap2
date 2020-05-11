@@ -16,7 +16,3 @@
 *.RTF	 diff=astextplain
 *.npz filter=lfs diff=lfs merge=lfs -text
 . text !filter !merge !diff
-*.gitignore filter=lfs diff=lfs merge=lfs -text
-*.py filter=lfs diff=lfs merge=lfs -text
-*.pyc filter=lfs diff=lfs merge=lfs -text
-*.bak filter=lfs diff=lfs merge=lfs -text
