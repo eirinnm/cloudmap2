@@ -21,6 +21,9 @@ def parse(filename, whitelist_chrs, minqual=0):
                         genotype_indices['mut']=i
                     elif col.lower().startswith('sib'):
                         genotype_indices['sib']=i
+                if not genotype_indices:
+                    print("No sample column named 'mutant' or 'sibling'. Treating the last column as mutant.")
+                    genotype_indices['mut']=i
                 continue
             chromosome = row[0].upper()
             chromosome = chromosome.replace("CHROMOSOME_","")
@@ -38,34 +41,60 @@ def parse(filename, whitelist_chrs, minqual=0):
                         ratios={}
                         depths={}
                         vcf_format_info = row[8].split(":")
-                        if 'RO' not in vcf_format_info:
-                            raise ValueError("Could not find RO field in info string")
-                        try:
-                            for genotype, index in genotype_indices.items():
-                                genotype_data = row[index].split(':')
-                                if len(genotype_data)>1:
-                                    ro = int(genotype_data[vcf_format_info.index('RO')])
-                                    ao = int(genotype_data[vcf_format_info.index('AO')])
+                        if 'RO' in vcf_format_info: ## for Freebayes output
+                            #raise ValueError("Could not find RO field in info string")
+                            try:
+                                for genotype, index in genotype_indices.items():
+                                    genotype_data = row[index].split(':')
+                                    if len(genotype_data)>1:
+                                        ro = int(genotype_data[vcf_format_info.index('RO')])
+                                        ao = int(genotype_data[vcf_format_info.index('AO')])
+                                        depth = ro+ao
+                                        ratios[genotype] = 1.0 * ao / depth
+                                        depths[genotype] = depth
+                                    else: ## the SNP is empty for this genotype
+                                        ## we don't know what allele it is so it should be skipped
+                                        Absent_counters[genotype]=Absent_counters.get(genotype,0)+1
+                                        break #breaks out of this mini-loop
+                                else:
+                                    ## only runs if the parsing was successful
+                                    row_ratios = [ratios[genotype] for genotype in ['mut','sib'] if genotype in genotype_indices]
+                                    row_depths = [depths[genotype] for genotype in ['mut','sib'] if genotype in genotype_indices]
+                                    rowdata = [int(position),ref,alt,qual]+row_ratios+row_depths
+                                    chrdict[chromosome].append(rowdata)
+                
+                            except ValueError:
+                                Triallelic_counter+=1
+                                continue #ignore rows that can't be converted, like tri-allelic
+                            except ZeroDivisionError:
+                                Zerodepth_counter+=1
+                                continue
+                        elif 'AD' in vcf_format_info: ## this is for Samtools output
+                            try:
+                                for genotype, index in genotype_indices.items():
+                                    genotype_data = row[index].split(':')
+                                    ad_field = genotype_data[vcf_format_info.index('AD')].split(',')
+                                    if len(ad_field)>2:
+                                        raise ValueError('Triallelic')
+                                    ro = int(ad_field[0])
+                                    ao = int(ad_field[1])
                                     depth = ro+ao
                                     ratios[genotype] = 1.0 * ao / depth
                                     depths[genotype] = depth
-                                else: ## the SNP is empty for this genotype
-                                    ## we don't know what allele it is so it should be skipped
-                                    Absent_counters[genotype]=Absent_counters.get(genotype,0)+1
-                                    break #breaks out of this mini-loop
-                            else:
-                                ## only runs if the parsing was successful
-                                row_ratios = [ratios[genotype] for genotype in ['mut','sib'] if genotype in genotype_indices]
-                                row_depths = [depths[genotype] for genotype in ['mut','sib'] if genotype in genotype_indices]
-                                rowdata = [int(position),ref,alt,qual]+row_ratios+row_depths
-                                chrdict[chromosome].append(rowdata)
-            
-                        except ValueError:
-                            Triallelic_counter+=1
-                            continue #ignore rows that can't be converted, like tri-allelic
-                        except ZeroDivisionError:
-                            Zerodepth_counter+=1
-                            continue
+                                else:
+                                    ## only runs if the parsing was successful
+                                    row_ratios = [ratios[genotype] for genotype in ['mut','sib'] if genotype in genotype_indices]
+                                    row_depths = [depths[genotype] for genotype in ['mut','sib'] if genotype in genotype_indices]
+                                    rowdata = [int(position),ref,alt,qual]+row_ratios+row_depths
+                                    chrdict[chromosome].append(rowdata)
+                            except ValueError:
+                                Triallelic_counter+=1
+                                continue #ignore rows that can't be converted, like tri-allelic
+                            except ZeroDivisionError:
+                                Zerodepth_counter+=1
+                                continue
+                                
+                            
                     except:
                         print("Parsing failed at "+chromosome+':'+position)
                         raise
